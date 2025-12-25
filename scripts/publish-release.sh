@@ -85,7 +85,12 @@ EOF
     mv "${TMPFILE}" "${CHANGELOG}"
   fi
 
-  : "${EDITOR:=${VISUAL:-vi}}"
+  # Prefer nano for editing the changelog if available; otherwise fall back to EDITOR/VISUAL or vi.
+  if command -v nano >/dev/null 2>&1; then
+    EDITOR="nano"
+  else
+    : "${EDITOR:=${VISUAL:-vi}}"
+  fi
   "${EDITOR}" "${CHANGELOG}"
 else
   echo "Make sure to update ${CHANGELOG} with notes for ${TAG} before publishing."
