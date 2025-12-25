@@ -108,46 +108,49 @@ fi
 git push "${REMOTE}" "${TAG}"
 echo "Pushed tag ${TAG} to ${REMOTE}."
 
+# Determine repo owner/name from origin url (used for GitHub API and JitPack coordinates)
+ORIGIN_URL=$(git remote get-url "${REMOTE}" 2>/dev/null || true)
+# Support git@github.com:owner/repo(.git) and https://github.com/owner/repo(.git)
+if [[ "${ORIGIN_URL}" =~ ^git@github.com:(.+)/(.+?)(\.git)?$ ]]; then
+  OWNER="${BASH_REMATCH[1]}"
+  REPO="${BASH_REMATCH[2]}"
+elif [[ "${ORIGIN_URL}" =~ ^https://github.com/(.+)/(.+?)(\.git)?$ ]]; then
+  OWNER="${BASH_REMATCH[1]}"
+  REPO="${BASH_REMATCH[2]}"
+else
+  OWNER=""
+  REPO=""
+fi
+
 # Try gh CLI first
 if command -v gh >/dev/null 2>&1; then
   echo "Using gh CLI to create release..."
   gh release create "${TAG}" --title "v${VERSION}" --notes-file "${CHANGELOG}" --notes "Release ${VERSION}"
   echo "Release v${VERSION} created via gh."
-  exit 0
-fi
-
-# Fallback to GitHub API using GITHUB_TOKEN
-if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-  echo "gh CLI not found and GITHUB_TOKEN is not set. Install gh or set GITHUB_TOKEN."
-  exit 1
-fi
-
-# Determine repo owner/name from origin url
-ORIGIN_URL=$(git remote get-url "${REMOTE}")
-# Support git@github.com:owner/repo.git and https://github.com/owner/repo.git
-if [[ "${ORIGIN_URL}" =~ ^git@github.com:(.+)/(.+)\.git$ ]]; then
-  OWNER="${BASH_REMATCH[1]}"
-  REPO="${BASH_REMATCH[2]}"
-elif [[ "${ORIGIN_URL}" =~ ^https://github.com/(.+)/(.+)\.git$ ]]; then
-  OWNER="${BASH_REMATCH[1]}"
-  REPO="${BASH_REMATCH[2]}"
 else
-  echo "Unable to parse GitHub repo from origin URL: ${ORIGIN_URL}"
-  exit 1
-fi
+  # Fallback to GitHub API using GITHUB_TOKEN
+  if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+    echo "gh CLI not found and GITHUB_TOKEN is not set. Install gh or set GITHUB_TOKEN."
+    exit 1
+  fi
 
-API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases"
+  if [[ -z "${OWNER}" || -z "${REPO}" ]]; then
+    echo "Unable to parse GitHub repo from origin URL: ${ORIGIN_URL}"
+    exit 1
+  fi
 
-# Use changelog content if available for body
-if [[ -f "${CHANGELOG}" ]]; then
-  # Extract the top section for this version (until next "## " header) to include as body
-  RELEASE_BODY="$(awk '/^## /{if (c++==0) {print; next} else exit} {if (c==0) print}' "${CHANGELOG}" | sed '1d' || true)"
-else
-  RELEASE_BODY="Release ${VERSION}"
-fi
+  API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases"
 
-# JSON encode simple body (safe for most contents)
-POST_DATA=$(cat <<EOF
+  # Use changelog content if available for body
+  if [[ -f "${CHANGELOG}" ]]; then
+    # Extract the top section for this version (until next "## " header) to include as body
+    RELEASE_BODY="$(awk '/^## /{if (c++==0) {print; next} else exit} {if (c==0) print}' "${CHANGELOG}" | sed '1d' || true)"
+  else
+    RELEASE_BODY="Release ${VERSION}"
+  fi
+
+  # JSON encode simple body (safe for most contents)
+  POST_DATA=$(cat <<EOF
 {
   "tag_name": "${TAG}",
   "name": "v${VERSION}",
@@ -158,17 +161,62 @@ POST_DATA=$(cat <<EOF
 EOF
 )
 
-echo "Creating release via GitHub API for ${OWNER}/${REPO}..."
-HTTP_RESPONSE=$(curl -sS -o /dev/stderr -w "%{http_code}" \
-  -X POST "${API_URL}" \
-  -H "Authorization: token ${GITHUB_TOKEN}" \
-  -H "Accept: application/vnd.github+json" \
-  -d "${POST_DATA}" 2>/dev/null || true)
+  echo "Creating release via GitHub API for ${OWNER}/${REPO}..."
+  HTTP_RESPONSE=$(curl -sS -o /dev/stderr -w "%{http_code}" \
+    -X POST "${API_URL}" \
+    -H "Authorization: token ${GITHUB_TOKEN}" \
+    -H "Accept: application/vnd.github+json" \
+    -d "${POST_DATA}" 2>/dev/null || true)
 
-if [[ "${HTTP_RESPONSE}" == "201" ]]; then
-  echo "Release v${VERSION} created successfully."
-  exit 0
-else
-  echo "Failed to create release (HTTP ${HTTP_RESPONSE})."
-  exit 1
+  if [[ "${HTTP_RESPONSE}" == "201" ]]; then
+    echo "Release v${VERSION} created successfully."
+  else
+    echo "Failed to create release (HTTP ${HTTP_RESPONSE})."
+    exit 1
+  fi
 fi
+
+# At this point the GitHub release/tag exists. Publish to JitPack by triggering a build and show coordinates.
+if [[ -n "${OWNER}" && -n "${REPO}" ]]; then
+  JITPACK_BASE="https://jitpack.io"
+  # JitPack expects the tag name as the version; recommend using the tag including the leading 'v' if that's the tag on GitHub.
+  JITPACK_VERSION="${TAG}"
+  echo
+  echo "Triggering JitPack build for ${OWNER}/${REPO} tag ${JITPACK_VERSION}..."
+  JITPACK_BUILD_URL="${JITPACK_BASE}/com/github/${OWNER}/${REPO}/${JITPACK_VERSION}/build.log"
+
+  # Fetch build log (this triggers the build). Save to a temp file and show a short tail so users can see progress.
+  TMP_JITLOG="$(mktemp)"
+  HTTP_CODE=$(curl -sS -w "%{http_code}" -o "${TMP_JITLOG}" "${JITPACK_BUILD_URL}" || true)
+  if [[ "${HTTP_CODE}" == "200" ]]; then
+    echo "JitPack build triggered. Showing last 40 lines of build log (if any):"
+    tail -n 40 "${TMP_JITLOG}" || true
+  else
+    echo "Unable to fetch JitPack build log (HTTP ${HTTP_CODE}). You can visit: ${JITPACK_BUILD_URL} to trigger or view the build."
+  fi
+  rm -f "${TMP_JITLOG}"
+
+  echo
+  echo "JitPack coordinates (use these in your build):"
+  echo
+  echo "Add the JitPack repository to your build system if you haven't already:"
+  echo "  Gradle (settings.gradle or build.gradle):"
+  echo "    repositories { maven { url 'https://jitpack.io' } }"
+  echo
+  echo "Then add the dependency using the tag name (here we show both common forms):"
+  echo "  Gradle (Groovy): implementation 'com.github.${OWNER}:${REPO}:${JITPACK_VERSION}'"
+  echo "  Gradle (Kotlin): implementation(\"com.github.${OWNER}:${REPO}:${JITPACK_VERSION}\")"
+  echo
+  echo "  Maven:"
+  echo "    <dependency>"
+  echo "      <groupId>com.github.${OWNER}</groupId>"
+  echo "      <artifactId>${REPO}</artifactId>"
+  echo "      <version>${JITPACK_VERSION}</version>"
+  echo "    </dependency>"
+  echo
+  echo "Alternatively, if you prefer to drop the leading 'v' in the version, use '${JITPACK_VERSION#v}' as the version in the coordinates above."
+else
+  echo "Owner/repo not detected; skipping JitPack publish instructions. Ensure your remote origin points to GitHub to use JitPack."
+fi
+
+exit 0
