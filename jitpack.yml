@@ -1,0 +1,14 @@
+# JitPack config: ensure Java 17 and run publishToMavenLocal so the AAR and POM are produced.
+# See: https://docs.jitpack.io
+jdk:
+  - openjdk17
+
+# Use the default environment, but explicitly run the tasks JitPack should execute.
+# We avoid hardcoding the version here; JitPack supplies the tag when building.
+script:
+  - ./gradlew clean assembleRelease publishToMavenLocal -xtest -xlint
+
+# Increase Gradle memory if needed
+env:
+  GRADLE_OPTS: "-Xmx2g"
+
