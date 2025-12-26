@@ -245,6 +245,41 @@ if [[ -n "${OWNER}" && -n "${REPO}" ]]; then
   fi
   rm -f "${TMP_JITLOG}"
 
+  # Poll for the published POM file (artifactId = REPO, file: <REPO>-<VERSION>.pom)
+  echo
+  echo "Waiting for JitPack to publish POM for ${REPO} (version: ${JITPACK_VERSION})..."
+  POM_URLS=(
+    "${JITPACK_BASE}/com/github/${OWNER}/${REPO}/${JITPACK_VERSION}/${REPO}-${JITPACK_VERSION}.pom"
+    "${JITPACK_BASE}/com/github/${OWNER}/${REPO}/${JITPACK_VERSION#v}/${REPO}-${JITPACK_VERSION#v}.pom"
+  )
+
+  FOUND_POM=""
+  MAX_ATTEMPTS=10
+  SLEEP_SECONDS=3
+  for ((i=1;i<=MAX_ATTEMPTS;i++)); do
+    for url in "${POM_URLS[@]}"; do
+      code=$(curl -sS -o /dev/null -w "%{http_code}" "${url}" || true)
+      if [[ "${code}" == "200" ]]; then
+        FOUND_POM="${url}"
+        break 2
+      fi
+    done
+    echo "  Attempt ${i}/${MAX_ATTEMPTS}: POM not available yet. Sleeping ${SLEEP_SECONDS}s..."
+    sleep ${SLEEP_SECONDS}
+  done
+
+  if [[ -n "${FOUND_POM}" ]]; then
+    echo "POM available at: ${FOUND_POM}"
+    # Download to ./build or ./release if exists
+    OUT_DIR="./build/release"
+    mkdir -p "${OUT_DIR}"
+    OUT_FILE="${OUT_DIR}/${REPO}-${JITPACK_VERSION}.pom"
+    curl -sS -o "${OUT_FILE}" "${FOUND_POM}" || true
+    echo "Downloaded POM to: ${OUT_FILE}"
+  else
+    echo "Timed out waiting for POM. If the build is still running, check: ${JITPACK_BASE}/com/github/${OWNER}/${REPO}/${JITPACK_VERSION}/"
+  fi
+
   echo
   echo "JitPack coordinates (use these in your build):"
   echo
