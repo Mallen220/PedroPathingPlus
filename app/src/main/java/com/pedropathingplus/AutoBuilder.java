@@ -102,15 +102,17 @@ public class AutoBuilder {
                                 points[i+1] = PedroPathReader.toPose(line.controlPoints.get(i).x, line.controlPoints.get(i).y, 0);
                             }
                             points[points.length-1] = new Pose(endPose.getX(), endPose.getY(), 0);
-                            path = new BezierCurve(points);
+                            path = new Path(new BezierCurve(points));
                         } else {
                             // BezierLine
-                            path = new BezierLine(
+                            path = new Path(new BezierLine(
                                 new Pose(currentPose.getX(), currentPose.getY(), 0),
                                 new Pose(endPose.getX(), endPose.getY(), 0)
-                            );
+                            ));
                         }
-                        path.setPathEndTimeout(0);
+
+                        // setPathEndTimeout removed as it's not available or defaults are used.
+                        // Ideally we set it via PathBuilder if needed.
 
                         // Add to Builder
                         currentChainBuilder.addPath(path);
