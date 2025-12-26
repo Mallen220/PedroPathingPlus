@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.solvers.pedro)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
 }

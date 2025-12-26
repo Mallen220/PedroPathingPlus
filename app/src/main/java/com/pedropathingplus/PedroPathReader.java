@@ -8,6 +8,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +72,31 @@ public final class PedroPathReader {
 
   public Pose get(String name) {
     return poses.get(name);
+  }
+
+  /**
+   * Retrieves a list of available path filenames (ending in .json) from the "AutoPaths" asset directory.
+   *
+   * @param context The application context.
+   * @return A list of filenames, or an empty list if an error occurs or no files are found.
+   */
+  public static List<String> getAvailablePathNames(Context context) {
+    List<String> pathNames = new ArrayList<>();
+    try {
+      String[] files = context.getAssets().list("AutoPaths");
+      if (files != null) {
+        for (String file : files) {
+          if (file.endsWith(".json")) {
+            pathNames.add(file);
+          }
+        }
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+      // Return empty list on failure
+      return Collections.emptyList();
+    }
+    return pathNames;
   }
 
   private static Pose toPose(double x, double y, double deg) {

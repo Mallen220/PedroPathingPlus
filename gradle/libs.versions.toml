@@ -1,6 +1,7 @@
 [versions]
 agp = "8.3.1"
 junit = "4.13.2"
+mockito = "5.11.0"
 androidx-test-ext-junit = "1.1.5"
 espresso-core = "3.5.1"
 ftc-sdk = "11.0.0"
@@ -9,6 +10,7 @@ solvers-lib = "0.3.3"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
 ftc-robotcore = { group = "org.firstinspires.ftc", name = "RobotCore", version.ref = "ftc-sdk" }

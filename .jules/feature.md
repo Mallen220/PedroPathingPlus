@@ -1,0 +1,1 @@
+2024-05-22 - [Path Discovery] Learning: [Adding capability to list available paths improves UX for robot controllers] Action: [Implement getAvailablePathNames in PedroPathReader to allow dynamic UI population]
