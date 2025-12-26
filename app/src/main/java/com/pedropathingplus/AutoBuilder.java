@@ -4,7 +4,6 @@ import android.content.Context;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.Point;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
@@ -90,23 +89,25 @@ public class AutoBuilder {
                                 buildingChain = false;
                                 currentChainPathIndex = 0;
                             }
-                            mainGroup.addCommands(new WaitCommand(line.waitBeforeMs));
+                            mainGroup.addCommands(new WaitCommand((long) line.waitBeforeMs));
                         }
 
                         // Build Path Segment
                         Path path;
                         if (line.controlPoints != null && !line.controlPoints.isEmpty()) {
-                            Point[] points = new Point[line.controlPoints.size() + 2];
-                            points[0] = new Point(currentPose.getX(), currentPose.getY());
+                            // Use Pose array for BezierCurve
+                            Pose[] points = new Pose[line.controlPoints.size() + 2];
+                            points[0] = new Pose(currentPose.getX(), currentPose.getY(), 0); // Heading irrelevant for path points
                             for(int i=0; i<line.controlPoints.size(); i++) {
-                                points[i+1] = PedroPathReader.toPoint(line.controlPoints.get(i).x, line.controlPoints.get(i).y);
+                                points[i+1] = PedroPathReader.toPose(line.controlPoints.get(i).x, line.controlPoints.get(i).y, 0);
                             }
-                            points[points.length-1] = new Point(endPose.getX(), endPose.getY());
+                            points[points.length-1] = new Pose(endPose.getX(), endPose.getY(), 0);
                             path = new BezierCurve(points);
                         } else {
+                            // BezierLine
                             path = new BezierLine(
-                                new Point(currentPose.getX(), currentPose.getY()),
-                                new Point(endPose.getX(), endPose.getY())
+                                new Pose(currentPose.getX(), currentPose.getY(), 0),
+                                new Pose(endPose.getX(), endPose.getY(), 0)
                             );
                         }
                         path.setPathEndTimeout(0);
@@ -171,7 +172,7 @@ public class AutoBuilder {
                                 buildingChain = false;
                                 currentChainPathIndex = 0;
                             }
-                            mainGroup.addCommands(new WaitCommand(line.waitAfterMs));
+                            mainGroup.addCommands(new WaitCommand((long) line.waitAfterMs));
                         }
                     }
                 }

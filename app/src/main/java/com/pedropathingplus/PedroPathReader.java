@@ -4,7 +4,6 @@ import android.content.Context;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.geometry.Point;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,13 +90,6 @@ public final class PedroPathReader {
    */
   public static Pose toPose(double x, double y, double deg) {
     return new Pose(y, 144 - x, Math.toRadians(deg - 90));
-  }
-
-  /**
-   * Converts a PP Point to a PedroPathing Point.
-   */
-  public static Point toPoint(double x, double y) {
-      return new Point(y, 144 - x);
   }
 
   private static double extractHeading(
