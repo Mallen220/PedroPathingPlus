@@ -9,7 +9,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 /**
  * NamedCommands utility for registering and retrieving commands by name. Similar to WPILib's
- * NamedCommands, but adapted for solverslib.
+ * NamedCommands, but originally adapted for solverslib.
  *
  * <p>Usage: 1. Register commands in RobotContainer: NamedCommands.registerCommand("IntakeOn", new
  * IntakeOnCommand()); NamedCommands.registerCommand("Shoot", new ShootCommand());
