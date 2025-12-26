@@ -108,18 +108,67 @@ fi
 git push "${REMOTE}" "${TAG}"
 echo "Pushed tag ${TAG} to ${REMOTE}."
 
-# Determine repo owner/name from origin url (used for GitHub API and JitPack coordinates)
-ORIGIN_URL=$(git remote get-url "${REMOTE}" 2>/dev/null || true)
-# Support git@github.com:owner/repo(.git) and https://github.com/owner/repo(.git)
-if [[ "${ORIGIN_URL}" =~ ^git@github.com:(.+)/(.+?)(\.git)?$ ]]; then
-  OWNER="${BASH_REMATCH[1]}"
-  REPO="${BASH_REMATCH[2]}"
-elif [[ "${ORIGIN_URL}" =~ ^https://github.com/(.+)/(.+?)(\.git)?$ ]]; then
-  OWNER="${BASH_REMATCH[1]}"
-  REPO="${BASH_REMATCH[2]}"
+# Allow explicit override via env vars (useful in CI or when remote detection fails)
+if [[ -n "${GITHUB_OWNER:-}" && -n "${GITHUB_REPO:-}" ]]; then
+  OWNER="${GITHUB_OWNER}"
+  REPO="${GITHUB_REPO}"
+  echo "Using OWNER/REPO from environment: ${OWNER}/${REPO}"
 else
+  # Determine repo owner/name from origin url (used for GitHub API and JitPack coordinates)
+  # Prefer `git config --get remote.<name>.url` which is more portable in some environments
+  RAW_ORIGIN_URL=$(git config --get remote."${REMOTE}".url 2>/dev/null || true)
+  # If not present in config, try `git remote get-url`
+  if [[ -z "${RAW_ORIGIN_URL}" ]]; then
+    RAW_ORIGIN_URL=$(git remote get-url "${REMOTE}" 2>/dev/null || true)
+  fi
+  # Fallback: parse `git remote -v` output for origin (fetch) if still empty
+  if [[ -z "${RAW_ORIGIN_URL}" ]]; then
+    RAW_ORIGIN_URL=$(git remote -v 2>/dev/null | awk '/^origin\s+/{print $2; exit}' || true)
+  fi
+  ORIGIN_URL="${RAW_ORIGIN_URL:-}"
   OWNER=""
   REPO=""
+  if [[ -n "${ORIGIN_URL}" ]]; then
+    # Normalize common prefixes and formats to a plain host/path form:
+    # Examples -> github.com/owner/repo
+    NORMALIZED="${ORIGIN_URL}"
+    # Remove git+ssh://, ssh://, git://, https://, http:// prefixes
+    NORMALIZED="${NORMALIZED#git+ssh://}"
+    NORMALIZED="${NORMALIZED#ssh://}"
+    NORMALIZED="${NORMALIZED#git://}"
+    NORMALIZED="${NORMALIZED#https://}"
+    NORMALIZED="${NORMALIZED#http://}"
+    # Convert git@github.com:owner/repo.git -> git@github.com/owner/repo.git
+    NORMALIZED="${NORMALIZED/:/\/}"
+    # If it started with git@, drop the user prefix so we have github.com/owner/repo.git
+    NORMALIZED="${NORMALIZED#git@}"
+    # Trim any trailing .git
+    NORMALIZED="${NORMALIZED%.git}"
+
+    # Now try to extract owner/repo from the normalized form
+    if [[ "${NORMALIZED}" =~ github\.com/([^/]+)/([^/]+)$ ]]; then
+      OWNER="${BASH_REMATCH[1]}"
+      REPO="${BASH_REMATCH[2]}"
+    else
+      # As a last resort, split on '/' and take the last two path components
+      IFS='/' read -r -a PARTS <<<"${NORMALIZED}"
+      LEN=${#PARTS[@]}
+      if (( LEN >= 2 )); then
+        OWNER="${PARTS[LEN-2]}"
+        REPO="${PARTS[LEN-1]}"
+      fi
+    fi
+  fi
+fi
+
+# If detection failed, print a helpful debug line for the user (but continue)
+if [[ -z "${OWNER}" || -z "${REPO}" ]]; then
+  echo "Warning: unable to auto-detect OWNER/REPO from remote '${REMOTE}'. Origin URL: '${ORIGIN_URL}'"
+  echo "If this is unexpected, ensure your remote is set to GitHub (for example: git@github.com:Mallen220/PedroPathingPlus.git)"
+  echo "To set the correct origin URL run:"
+  echo "  git remote set-url ${REMOTE} git@github.com:Mallen220/PedroPathingPlus.git"
+else
+  echo "Detected GitHub repo: ${OWNER}/${REPO} (from ${ORIGIN_URL})"
 fi
 
 # Try gh CLI first
