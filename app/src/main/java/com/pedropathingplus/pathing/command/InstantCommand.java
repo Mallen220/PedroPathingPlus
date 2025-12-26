@@ -1,9 +1,7 @@
 package com.pedropathingplus.pathing.command;
 
 /**
- * A command that runs a Runnable immediately when scheduled.
- * This serves as a simple replacement for SolversLib's InstantCommand when the library is not present,
- * or as a lightweight local command implementation.
+ * A command that runs a Runnable immediately when scheduled and finishes immediately.
  */
 public class InstantCommand implements Command {
     private final Runnable toRun;
@@ -13,9 +11,14 @@ public class InstantCommand implements Command {
     }
 
     @Override
-    public void schedule() {
+    public void initialize() {
         if (toRun != null) {
             toRun.run();
         }
+    }
+
+    @Override
+    public boolean isFinished() {
+        return true;
     }
 }
