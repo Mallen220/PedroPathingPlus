@@ -1,7 +1,7 @@
 package com.pedropathingplus.pathing;
 
-import com.seattlesolvers.solverslib.command.Command;
-import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.pedropathingplus.pathing.command.Command;
+import com.pedropathingplus.pathing.command.InstantCommand;
 import java.util.HashMap;
 import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
