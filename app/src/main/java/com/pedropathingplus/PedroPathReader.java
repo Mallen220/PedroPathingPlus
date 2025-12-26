@@ -4,6 +4,7 @@ import android.content.Context;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.geometry.Point;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,7 +15,7 @@ import java.util.Map;
 
 public final class PedroPathReader {
 
-  private final PedroPP file;
+  public final PedroPP file;
   private final Map<String, Pose> poses = new HashMap<>();
 
   private double lastX;
@@ -24,9 +25,14 @@ public final class PedroPathReader {
   public PedroPathReader(String filename, Context context) throws IOException {
     InputStream stream = null;
     try {
-      stream = context.getAssets().open("AutoPaths/" + filename);
-    } catch (IOException e) {
-      throw e;
+      stream = context.getAssets().open("AutoPaths/" + filename + ".pp");
+    } catch (Exception e) {
+       // try without extension
+        try {
+            stream = context.getAssets().open("AutoPaths/" + filename);
+        } catch (IOException e2) {
+            throw e2;
+        }
     }
 
     if (stream == null) {
@@ -62,6 +68,13 @@ public final class PedroPathReader {
       String name = line.name.replace(" ", "");
       poses.put(name, toPose(lx, ly, heading));
 
+      if (line.controlPoints != null) {
+          for (int i = 0; i < line.controlPoints.size(); i++) {
+              PedroPP.Point cp = line.controlPoints.get(i);
+              poses.put(name + "_control" + (i+1), toPose(cp.x, cp.y, 0));
+          }
+      }
+
       lastX = lx;
       lastY = ly;
       lastDeg = heading;
@@ -72,8 +85,19 @@ public final class PedroPathReader {
     return poses.get(name);
   }
 
-  private static Pose toPose(double x, double y, double deg) {
+  /**
+   * Converts raw PP coordinates (usually Landscape) to PedroPathing Poses.
+   * Logic: Y -> X, 144 - X -> Y, deg - 90 -> radians.
+   */
+  public static Pose toPose(double x, double y, double deg) {
     return new Pose(y, 144 - x, Math.toRadians(deg - 90));
+  }
+
+  /**
+   * Converts a PP Point to a PedroPathing Point.
+   */
+  public static Point toPoint(double x, double y) {
+      return new Point(y, 144 - x);
   }
 
   private static double extractHeading(
@@ -103,6 +127,7 @@ class PedroPP {
 
   public StartPoint startPoint;
   public List<Line> lines;
+  public List<SequenceItem> sequence;
 
   public static class StartPoint {
     public double x;
@@ -113,8 +138,14 @@ class PedroPP {
   }
 
   public static class Line {
+    public String id;
     public String name;
     public EndPoint endPoint;
+    public List<Point> controlPoints;
+    public List<EventMarker> eventMarkers;
+    public String color;
+    public int waitBeforeMs;
+    public int waitAfterMs;
   }
 
   public static class EndPoint {
@@ -122,5 +153,23 @@ class PedroPP {
     public double y;
     public String heading;
     public boolean reverse;
+  }
+
+  public static class Point {
+      public double x;
+      public double y;
+  }
+
+  public static class EventMarker {
+      public String id;
+      public String name;
+      public double position; // 0.0 to 1.0
+      public int lineIndex; // Sometimes used
+      public String commandId;
+  }
+
+  public static class SequenceItem {
+      public String kind; // "path"
+      public String lineId;
   }
 }
