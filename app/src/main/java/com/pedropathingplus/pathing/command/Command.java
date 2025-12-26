@@ -1,17 +1,15 @@
 package com.pedropathingplus.pathing.command;
 
-public abstract class Command {
+/**
+ * Interface for a Command.
+ * This defines a contract for any executable action that can be scheduled.
+ * By using an interface, we allow integration with other command-based libraries (like SolversLib, NextFTC)
+ * via adapters or direct implementation, without enforcing a specific inheritance hierarchy.
+ */
+public interface Command {
     /**
-     * The run method which should be implemented by subclasses.
-     * This is where the command logic resides.
+     * Schedules the command for execution.
+     * The implementation detail (immediate execution, adding to a scheduler, etc.) depends on the concrete class.
      */
-    public abstract void run();
-
-    /**
-     * Schedules the command to be run.
-     * In this implementation without SolversLib, it immediately runs the command.
-     */
-    public void schedule() {
-        run();
-    }
+    void schedule();
 }
