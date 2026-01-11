@@ -17,6 +17,12 @@ public class ProgressTracker {
   private double chainProgress = 0.0;
   private double pathProgress = 0.0;
 
+  // Turn tracking
+  private boolean isTrackingTurn = false;
+  private double startHeading;
+  private double targetHeading;
+  private double totalTurnRadians;
+
   public ProgressTracker(Follower follower, Telemetry telemetry) {
     this.follower = follower;
     this.telemetry = telemetry;
@@ -93,8 +99,58 @@ public class ProgressTracker {
     return pathProgress >= eventPosition;
   }
 
+  /**
+   * Turns to a specific angle and registers an event to be triggered at a certain percentage of the
+   * turn.
+   *
+   * @param radians The target angle in radians
+   * @param eventName The name of the event to trigger
+   * @param eventThreshold The percentage (0-1) of the turn at which to trigger the event
+   */
+  public void turn(double radians, String eventName, double eventThreshold) {
+    follower.turnTo(radians);
+    startHeading = follower.getPose().getHeading();
+    targetHeading = radians;
+    totalTurnRadians = Math.abs(getSmallestAngleDifference(targetHeading, startHeading));
+    isTrackingTurn = true;
+    clearEvents();
+    registerEvent(eventName, eventThreshold);
+  }
+
+  private double getSmallestAngleDifference(double angle1, double angle2) {
+    double diff = angle1 - angle2;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    return diff;
+  }
+
   private void updateProgress() {
-    if (currentChain != null && follower.getCurrentPath() != null) {
+    if (isTrackingTurn) {
+      if (follower.isTurning()) {
+        double currentHeading = follower.getPose().getHeading();
+        double remainingRadians = Math.abs(getSmallestAngleDifference(targetHeading, currentHeading));
+
+        double progress;
+        if (totalTurnRadians < 1e-6) {
+          progress = 1.0;
+        } else {
+          progress = 1.0 - (remainingRadians / totalTurnRadians);
+        }
+
+        pathProgress = Math.max(0.0, Math.min(1.0, progress));
+        chainProgress = pathProgress; // For turn, chain progress mirrors turn progress
+
+        if (telemetry != null) {
+          telemetry.addData("Turn Progress", String.format("%.3f", pathProgress));
+          telemetry.addData("Turn Remaining", String.format("%.3f rad", remainingRadians));
+        }
+      } else {
+        // Turn finished
+        isTrackingTurn = false;
+        pathProgress = 1.0;
+        chainProgress = 1.0;
+      }
+    } else if (currentChain != null && follower.getCurrentPath() != null) {
       // For individual path progress (0 to 1)
       pathProgress = Math.min(follower.getCurrentTValue(), 1.0);
 
