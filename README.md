@@ -1,68 +1,129 @@
 # PedroPathingPlus
 
-**PedroPathingPlus** is an advanced pathing library for the FIRST Tech Challenge (FTC), built on top of the powerful [Pedro Pathing](https://github.com/PedroPathing/PedroPathing) library and integrating robust command-based structures.
+**PedroPathingPlus** is an advanced pathing library for the FIRST Tech Challenge (FTC), built on top of the [Pedro Pathing](https://github.com/Pedro-Pathing/PedroPathing) library and integrating robust command-based structures.
 
 > [!IMPORTANT]
 > **STAY TUNED!**
-> This repository is currently undergoing **rapid and constant updates**.
-> Major improvements are planned for the coming weeks, including the ability to **run entire autonomous routines directly from `.pp` files**.
-> Please watch this repository to stay up-to-date with the latest features and changes.
+> This repository is currently undergoing **rapid and constant updates**. Major improvements are planned, including the ability to **run entire autonomous routines directly from \`.pp\` files**.
 
 ---
 
 ## 🎨 Pedro Pathing Visualizer
 
-This library is designed to work hand-in-hand with the **Pedro Pathing Visualizer**, a powerful desktop application for planning, simulating, and exporting your autonomous routines.
-
-**[Download Pedro Pathing Visualizer](https://github.com/Mallen220/PedroPathingVisualizer)**
-
-The Visualizer powers PedroPathingPlus by providing:
-- **Visual Path Editing:** Intuitive drag-and-drop interface for Bezier curves and path chains.
-- **Simulation:** Real-time physics simulation to verify your paths before they run on the robot.
-- **Local File Management:** Save and organize `.pp` files directly on your machine.
-- **Code & File Export:** Seamlessly export to Java code or `.pp` files for the upcoming execution engine.
+Download the Visualizer: https://github.com/Mallen220/PedroPathingVisualizer/releases
 
 ---
 
 ## 📥 Installation
 
-To use PedroPathingPlus in your FTC project, follow these steps:
+Most FTC teams will use the Gradle dependency line:
 
-### 1. Add Repositories
+    implementation 'com.github.Mallen220:PedroPathingPlus:<version-or-branch>'
 
-Add the following repositories to your `build.gradle` (Module: app) or `settings.gradle` file:
+Replace `<version-or-branch>` with a tag (for example `v1.0.6`), a release, or `master-SNAPSHOT` for an up-to-date build.
+
+### Repositories
+
+Add JitPack to your repositories so Gradle or Maven can resolve the artifact.
+
+- Gradle (Project-level `build.gradle` or `settings.gradle`):
 
 ```groovy
-maven { url = uri("https://jitpack.io") }
-maven { url = uri("https://mymaven.bylazar.com/releases") }
-maven { url = uri("https://repo.dairy.foundation/releases") }
+// Project build.gradle (Groovy)
+allprojects {
+    repositories {
+        maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://mymaven.bylazar.com/releases") }
+        maven { url = uri("https://repo.dairy.foundation/releases") }
+        google()
+        mavenCentral()
+    }
+}
 ```
 
-### 2. Add Dependencies
+```kotlin
+// settings.gradle.kts or build.gradle.kts (Kotlin DSL)
+dependencyResolutionManagement {
+    repositories {
+        maven("https://jitpack.io")
+        maven("https://mymaven.bylazar.com/releases")
+        maven("https://repo.dairy.foundation/releases")
+        google()
+        mavenCentral()
+    }
+}
+```
 
-Add the dependencies to your `build.gradle` (Module: app) dependencies block:
+- Maven (`pom.xml` repositories):
+
+```xml
+<repositories>
+  <repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+  </repository>
+  <repository>
+    <id>bylazar</id>
+    <url>https://mymaven.bylazar.com/releases</url>
+  </repository>
+  <repository>
+    <id>dairy</id>
+    <url>https://repo.dairy.foundation/releases</url>
+  </repository>
+</repositories>
+```
+
+### Gradle Dependencies
+
+- Groovy DSL (Module: `app` `build.gradle`):
 
 ```groovy
 dependencies {
-    // PedroPathingPlus
-    implementation("com.github.Mallen220:PedroPathingPlus:master-SNAPSHOT") // or use a specific tag
+    // PedroPathingPlus (most FTC teams)
+    implementation 'com.github.Mallen220:PedroPathingPlus:<version-or-branch>'
 
-    // Core Dependencies
+    // Core / related libraries
+    implementation 'com.pedropathing:ftc:2.0.0'
+    implementation 'org.solverslib:core:0.3.3' // Will be removed in future versions for PedroPathingPlus native usage
+    implementation 'org.solverslib:pedroPathing:0.3.3'
+}
+```
+
+- Kotlin DSL (Module: `app` `build.gradle.kts`):
+
+```kotlin
+dependencies {
+    implementation("com.github.Mallen220:PedroPathingPlus:<version-or-branch>")
     implementation("com.pedropathing:ftc:2.0.0")
-    implementation("org.solverslib:core:0.3.3")
+    implementation("org.solverslib:core:0.3.3") // Will be removed in future versions for PedroPathingPlus native usage
     implementation("org.solverslib:pedroPathing:0.3.3")
 }
 ```
+
+### Maven Dependency
+
+```xml
+<dependency>
+  <groupId>com.github.Mallen220</groupId>
+  <artifactId>PedroPathingPlus</artifactId>
+  <version>{version-or-branch}</version>
+</dependency>
+```
+
+---
+
+## ⚠️ Notes
+
+- Use a specific tag or release for reproducible builds (for example `v1.0.6`). JitPack resolves artifacts as `com.github.Username:Repo:Tag` (e.g., `com.github.Mallen220:PedroPathingPlus:v1.0.6`) or branch/commit specifiers.
+- If you see resolution issues (for example with `com.pedropathing:ftc:2.0.0`), ensure the required repositories are added and that your Gradle JVM matches the library/tooling requirements.
+- For JitPack build output and troubleshooting, visit https://jitpack.io and paste the tag or commit for logs.
 
 ---
 
 ## 🚀 Upcoming Features
 
-We are working hard to bring you:
-- **Direct `.pp` Execution:** Run autonomous routines defined in `.pp` files without writing boilerplate Java code.
-- **Enhanced Command Integration:** Tighter integration with the command-based paradigm.
-- **Improved Documentation:** Comprehensive guides and examples.
-
----
+- Direct \`.pp\` execution
+- Enhanced command integration
+- Improved documentation
 
 **Built by [Mallen220](https://github.com/Mallen220) & Contributors**
