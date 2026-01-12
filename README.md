@@ -1,6 +1,6 @@
 # PedroPathingPlus
 
-**PedroPathingPlus** is an advanced pathing library for the FIRST Tech Challenge (FTC), built on top of the powerful [Pedro Pathing](https://github.com/PedroPathing/PedroPathing) library and integrating robust command-based structures.
+**PedroPathingPlus** is an advanced pathing library for the FIRST Tech Challenge (FTC), built on top of the powerful [Pedro Pathing](https://github.com/Pedro-Pathing/PedroPathing) library and integrating robust command-based structures.
 
 > [!IMPORTANT]
 > **STAY TUNED!**
@@ -14,7 +14,7 @@
 
 This library is designed to work hand-in-hand with the **Pedro Pathing Visualizer**, a powerful desktop application for planning, simulating, and exporting your autonomous routines.
 
-**[Download Pedro Pathing Visualizer](https://github.com/Mallen220/PedroPathingVisualizer)**
+**[Download Pedro Pathing Visualizer](https://github.com/Mallen220/PedroPathingVisualizer/releases)**
 
 The Visualizer powers PedroPathingPlus by providing:
 - **Visual Path Editing:** Intuitive drag-and-drop interface for Bezier curves and path chains.
