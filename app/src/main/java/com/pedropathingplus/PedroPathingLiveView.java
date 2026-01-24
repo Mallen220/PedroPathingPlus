@@ -14,6 +14,34 @@ import java.util.function.Supplier;
 /**
  * A utility class to send real-time robot pose telemetry to the Pedro Pathing Visualizer.
  * It runs a TCP server on port 8888 and broadcasts the robot's pose as JSON.
+ * <p>
+ * <h2>Usage Instructions:</h2>
+ * <ol>
+ *   <li><strong>Instantiate:</strong> Create an instance of this class in your OpMode, passing your {@code Follower} instance.</li>
+ *   <li><strong>Start:</strong> Call {@link #start()} in your OpMode's {@code init()} or {@code start()} method.</li>
+ *   <li><strong>Stop:</strong> Call {@link #stop()} in your OpMode's {@code stop()} method to release resources.</li>
+ *   <li><strong>Connect:</strong> In the Pedro Pathing Visualizer, connect to the robot's IP address on port <strong>8888</strong>.</li>
+ * </ol>
+ *
+ * <pre>{@code
+ * public class MyAuto extends LinearOpMode {
+ *     private Follower follower;
+ *     private PedroPathingLiveView liveView;
+ *
+ *     @Override
+ *     public void runOpMode() {
+ *         follower = new Follower(...);
+ *         liveView = new PedroPathingLiveView(follower);
+ *
+ *         liveView.start();
+ *
+ *         waitForStart();
+ *         // ... run pathing ...
+ *
+ *         liveView.stop();
+ *     }
+ * }
+ * }</pre>
  */
 public class PedroPathingLiveView {
     private final Supplier<Pose> poseProvider;
