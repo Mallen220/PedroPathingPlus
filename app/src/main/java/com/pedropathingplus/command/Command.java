@@ -44,4 +44,11 @@ public interface Command {
     default Set<Object> getRequirements() {
         return Collections.emptySet();
     }
+
+    /**
+     * Schedules this command.
+     */
+    default void schedule() {
+        CommandScheduler.getInstance().schedule(this);
+    }
 }

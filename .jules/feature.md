@@ -17,3 +17,7 @@ Action: Always grep for the package name of the removed dependency to catch all 
 2024-05-23 - Build Configuration for External Deps
 Learning: Dependencies expected to be in custom repos might sometimes be missing or only available via JitPack with different coordinates.
 Action: When a dependency fails to resolve, check alternative repositories (like JitPack) and verify coordinates (GitHub group/repo vs maven group).
+
+2024-05-23 - API Compatibility
+Learning: When replacing an external library with a local implementation, ensure the local API (e.g., `Command.schedule()`) matches the methods expected by consuming classes (`ProgressTracker`) to avoid compilation errors.
+Action: Check call sites of replaced classes to ensure all used methods are implemented in the new version.
