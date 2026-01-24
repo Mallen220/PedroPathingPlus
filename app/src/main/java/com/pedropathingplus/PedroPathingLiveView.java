@@ -9,42 +9,47 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
  * A utility class to send real-time robot pose telemetry to the Pedro Pathing Visualizer.
  * It runs a TCP server on port 8888 and broadcasts the robot's pose as JSON.
  * <p>
+ * This class uses the Singleton pattern to ensure the server persists across OpModes.
+ * <p>
  * <h2>Usage Instructions:</h2>
  * <ol>
- *   <li><strong>Instantiate:</strong> Create an instance of this class in your OpMode, passing your {@code Follower} instance.</li>
- *   <li><strong>Start:</strong> Call {@link #start()} in your OpMode's {@code init()} or {@code start()} method.</li>
- *   <li><strong>Stop:</strong> Call {@link #stop()} in your OpMode's {@code stop()} method to release resources.</li>
- *   <li><strong>Connect:</strong> In the Pedro Pathing Visualizer, connect to the robot's IP address on port <strong>8888</strong>.</li>
+ *   <li><strong>Start:</strong> Call {@link #start()} in your OpMode's {@code init()} (it is safe to call multiple times).</li>
+ *   <li><strong>Set Follower:</strong> Call {@link #setFollower(Follower)} in {@code init()} to link the current OpMode's follower.</li>
+ *   <li><strong>Cleanup:</strong> Call {@link #disable()} in your OpMode's {@code stop()} to clear the reference and prevent memory leaks.</li>
  * </ol>
  *
  * <pre>{@code
  * public class MyAuto extends LinearOpMode {
  *     private Follower follower;
- *     private PedroPathingLiveView liveView;
  *
  *     @Override
  *     public void runOpMode() {
  *         follower = new Follower(...);
- *         liveView = new PedroPathingLiveView(follower);
  *
- *         liveView.start();
+ *         // Start server (if not running) and link follower
+ *         PedroPathingLiveView.getInstance().start();
+ *         PedroPathingLiveView.getInstance().setFollower(follower);
  *
  *         waitForStart();
  *         // ... run pathing ...
  *
- *         liveView.stop();
+ *         // Clean up reference when done
+ *         PedroPathingLiveView.getInstance().disable();
  *     }
  * }
  * }</pre>
  */
 public class PedroPathingLiveView {
-    private final Supplier<Pose> poseProvider;
+    private static final PedroPathingLiveView INSTANCE = new PedroPathingLiveView();
+
+    private final AtomicReference<Supplier<Pose>> poseProvider = new AtomicReference<>();
     private Thread serverThread;
     private ServerSocket serverSocket;
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -52,25 +57,51 @@ public class PedroPathingLiveView {
     private static final int UPDATE_INTERVAL_MS = 50;
 
     /**
-     * Constructs the live view with a Follower instance.
+     * Private constructor for Singleton.
+     */
+    private PedroPathingLiveView() {}
+
+    /**
+     * @return The singleton instance of PedroPathingLiveView.
+     */
+    public static PedroPathingLiveView getInstance() {
+        return INSTANCE;
+    }
+
+    /**
+     * Sets the Follower instance to track.
+     * call this in your OpMode init.
      * @param follower The follower to track.
      */
-    public PedroPathingLiveView(Follower follower) {
-        this(follower::getPose);
+    public void setFollower(Follower follower) {
+        if (follower != null) {
+            this.poseProvider.set(follower::getPose);
+        } else {
+            this.poseProvider.set(null);
+        }
     }
 
     /**
-     * Constructs the live view with a custom pose provider.
+     * Sets a custom pose provider.
      * @param poseProvider A supplier for the current robot pose.
      */
-    public PedroPathingLiveView(Supplier<Pose> poseProvider) {
-        this.poseProvider = poseProvider;
+    public void setPoseProvider(Supplier<Pose> poseProvider) {
+        this.poseProvider.set(poseProvider);
     }
 
     /**
-     * Starts the telemetry server in a background thread.
+     * Disables telemetry by clearing the pose provider.
+     * Call this in your OpMode stop() to prevent accessing closed hardware.
      */
-    public void start() {
+    public void disable() {
+        this.poseProvider.set(null);
+    }
+
+    /**
+     * Starts the telemetry server in a background thread if it is not already running.
+     * This method is idempotent.
+     */
+    public synchronized void start() {
         if (running.get()) return;
         running.set(true);
         serverThread = new Thread(this::serverLoop);
@@ -80,8 +111,9 @@ public class PedroPathingLiveView {
 
     /**
      * Stops the telemetry server and closes connections.
+     * Typically not needed if you want the server to persist across OpModes.
      */
-    public void stop() {
+    public synchronized void stop() {
         if (!running.get()) return;
         running.set(false);
 
@@ -105,15 +137,8 @@ public class PedroPathingLiveView {
             while (running.get()) {
                 try {
                     Socket client = serverSocket.accept();
-                    // Handle client in the same thread (blocking others) or separate?
-                    // Usually for a visualizer, we might have one connection.
-                    // Or we spawn a thread per client.
-                    // Given the simple requirement, handling one client at a time in a loop
-                    // or spawning a thread is better.
-                    // Let's spawn a thread so we can accept reconnects or multiple visualizers.
                     new Thread(() -> handleClient(client)).start();
                 } catch (IOException e) {
-                    // Socket closed or error
                     if (running.get()) {
                         e.printStackTrace();
                     }
@@ -131,17 +156,24 @@ public class PedroPathingLiveView {
              PrintWriter writer = new PrintWriter(out, true)) {
 
             while (running.get() && !client.isClosed() && client.isConnected()) {
-                Pose pose = poseProvider.get();
-                if (pose != null) {
-                    // JSON format: {"x": 10.0, "y": 20.0, "heading": 1.57}
-                    String json = String.format(Locale.US,
-                        "{\"x\":%.4f, \"y\":%.4f, \"heading\":%.4f}",
-                        pose.getX(), pose.getY(), pose.getHeading());
-                    writer.println(json);
+                Supplier<Pose> provider = poseProvider.get();
+                if (provider != null) {
+                    try {
+                        Pose pose = provider.get();
+                        if (pose != null) {
+                            String json = String.format(Locale.US,
+                                "{\"x\":%.4f, \"y\":%.4f, \"heading\":%.4f}",
+                                pose.getX(), pose.getY(), pose.getHeading());
+                            writer.println(json);
+                        }
+                    } catch (Exception e) {
+                        // Handle potential exceptions from accessing closed hardware in provider
+                        // e.g. if user forgot to call disable()
+                        writer.println("{\"error\": \"provider_error\"}");
+                    }
                 }
 
                 if (writer.checkError()) {
-                    // Error writing (client disconnected)
                     break;
                 }
 
