@@ -41,7 +41,7 @@ public interface Command {
      *
      * @return the set of subsystems required by this command
      */
-    default Set<Subsystem> getRequirements() {
+    default Set<Object> getRequirements() {
         return Collections.emptySet();
     }
 }

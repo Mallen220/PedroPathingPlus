@@ -5,3 +5,7 @@ Action: Continue expanding the local command framework (e.g., adding Parallel/Se
 2024-05-23 - Testing Environment Constraint
 Learning: The development environment lacks a configured Android SDK, preventing `gradlew test` from running unit tests that depend on the Android plugin, even for pure Java code.
 Action: Run unit tests manually using `javac` and `java` with the system-provided JUnit jars, or ensure tests are strictly pure Java and do not rely on Android classes if possible.
+
+2024-05-23 - Foreign Command Compatibility
+Learning: Using `Object` keys for requirements and reflective adapters allows supporting commands from any library without hard dependencies.
+Action: Use this pattern when interoperability with unknown or multiple external libraries is required.

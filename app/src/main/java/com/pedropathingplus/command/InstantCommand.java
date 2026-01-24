@@ -9,9 +9,9 @@ import java.util.Set;
  */
 public class InstantCommand implements Command {
     private final Runnable toRun;
-    private final Set<Subsystem> requirements;
+    private final Set<Object> requirements;
 
-    public InstantCommand(Runnable toRun, Subsystem... requirements) {
+    public InstantCommand(Runnable toRun, Object... requirements) {
         this.toRun = toRun;
         this.requirements = new HashSet<>();
         Collections.addAll(this.requirements, requirements);
@@ -32,7 +32,7 @@ public class InstantCommand implements Command {
     }
 
     @Override
-    public Set<Subsystem> getRequirements() {
+    public Set<Object> getRequirements() {
         return requirements;
     }
 }

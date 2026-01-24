@@ -1,5 +1,6 @@
 package com.pedropathingplus.command;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,17 +12,17 @@ import java.util.Set;
 public class CommandScheduler {
     private static CommandScheduler instance;
 
-    // Map of subsystems to their current command
-    private final Map<Subsystem, Command> requirements = new HashMap<>();
+    // Map of subsystems (Objects) to their current command
+    private final Map<Object, Command> requirements = new HashMap<>();
 
-    // Map of subsystems to their default command
-    private final Map<Subsystem, Command> defaultCommands = new HashMap<>();
+    // Map of subsystems (Objects) to their default command
+    private final Map<Object, Command> defaultCommands = new HashMap<>();
 
     // List of scheduled commands (those currently running)
     private final List<Command> scheduledCommands = new ArrayList<>();
 
-    // List of registered subsystems
-    private final List<Subsystem> registeredSubsystems = new ArrayList<>();
+    // List of registered subsystems (Objects)
+    private final List<Object> registeredSubsystems = new ArrayList<>();
 
     // Commands to schedule in the next loop iteration
     private final List<Command> toSchedule = new ArrayList<>();
@@ -41,33 +42,40 @@ public class CommandScheduler {
 
     private CommandScheduler() {}
 
-    public void registerSubsystem(Subsystem subsystem) {
+    public void registerSubsystem(Object subsystem) {
         if (!registeredSubsystems.contains(subsystem)) {
             registeredSubsystems.add(subsystem);
         }
     }
 
-    public void setDefaultCommand(Subsystem subsystem, Command defaultCommand) {
-        if (!defaultCommand.getRequirements().contains(subsystem)) {
+    public void setDefaultCommand(Object subsystem, Object defaultCommand) {
+        Command cmd = asCommand(defaultCommand);
+        if (!cmd.getRequirements().contains(subsystem)) {
             throw new IllegalArgumentException("Default command must require the subsystem");
         }
-        defaultCommands.put(subsystem, defaultCommand);
+        defaultCommands.put(subsystem, cmd);
     }
 
-    public void schedule(Command... commands) {
+    /**
+     * Schedules one or more commands (or objects that act like commands).
+     * @param commands Command objects, or generic objects to be wrapped.
+     */
+    public void schedule(Object... commands) {
         if (inRunLoop) {
-            for (Command command : commands) {
-                toSchedule.add(command);
+            for (Object command : commands) {
+                toSchedule.add(asCommand(command));
             }
             return;
         }
 
-        for (Command command : commands) {
+        for (Object commandObj : commands) {
+            Command command = asCommand(commandObj);
+
             if (scheduledCommands.contains(command)) continue;
 
             // Check requirements
-            Set<Subsystem> requirementsSet = command.getRequirements();
-            for (Subsystem subsystem : requirementsSet) {
+            Set<Object> requirementsSet = command.getRequirements();
+            for (Object subsystem : requirementsSet) {
                 if (requirements.containsKey(subsystem)) {
                     Command currentCommand = requirements.get(subsystem);
                     // Cancel the current command using this subsystem
@@ -80,10 +88,20 @@ public class CommandScheduler {
         }
     }
 
-    private void initCommand(Command command, Set<Subsystem> requirementsSet) {
+    private Command asCommand(Object commandObj) {
+        if (commandObj instanceof Command) {
+            return (Command) commandObj;
+        } else if (commandObj instanceof Runnable) {
+            return new InstantCommand((Runnable) commandObj);
+        } else {
+            return new ReflectiveCommandAdapter(commandObj);
+        }
+    }
+
+    private void initCommand(Command command, Set<Object> requirementsSet) {
         command.initialize();
         scheduledCommands.add(command);
-        for (Subsystem subsystem : requirementsSet) {
+        for (Object subsystem : requirementsSet) {
             requirements.put(subsystem, command);
         }
     }
@@ -103,7 +121,7 @@ public class CommandScheduler {
             scheduledCommands.remove(command);
 
             // Remove from requirements map
-            for (Subsystem subsystem : command.getRequirements()) {
+            for (Object subsystem : command.getRequirements()) {
                 requirements.remove(subsystem);
             }
         }
@@ -113,8 +131,8 @@ public class CommandScheduler {
         inRunLoop = true;
 
         // Run subsystem periodic methods
-        for (Subsystem subsystem : registeredSubsystems) {
-            subsystem.periodic();
+        for (Object subsystem : registeredSubsystems) {
+            runPeriodic(subsystem);
         }
 
         // Run scheduled commands
@@ -127,7 +145,7 @@ public class CommandScheduler {
                 iterator.remove();
 
                 // Remove from requirements map
-                for (Subsystem subsystem : command.getRequirements()) {
+                for (Object subsystem : command.getRequirements()) {
                     requirements.remove(subsystem);
                 }
             }
@@ -139,7 +157,7 @@ public class CommandScheduler {
         if (!toSchedule.isEmpty()) {
             Command[] cmds = toSchedule.toArray(new Command[0]);
             toSchedule.clear();
-            schedule(cmds);
+            schedule((Object[])cmds);
         }
 
         if (!toCancel.isEmpty()) {
@@ -149,9 +167,24 @@ public class CommandScheduler {
         }
 
         // Schedule default commands if needed
-        for (Subsystem subsystem : registeredSubsystems) {
+        for (Object subsystem : registeredSubsystems) {
             if (!requirements.containsKey(subsystem) && defaultCommands.containsKey(subsystem)) {
                 schedule(defaultCommands.get(subsystem));
+            }
+        }
+    }
+
+    private void runPeriodic(Object subsystem) {
+        if (subsystem instanceof Subsystem) {
+            ((Subsystem) subsystem).periodic();
+        } else {
+            try {
+                Method periodic = subsystem.getClass().getMethod("periodic");
+                periodic.invoke(subsystem);
+            } catch (NoSuchMethodException ignored) {
+                // If it doesn't have periodic, that's fine.
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }

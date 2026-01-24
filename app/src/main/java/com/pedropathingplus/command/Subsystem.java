@@ -4,6 +4,10 @@ package com.pedropathingplus.command;
  * A subsystem is a part of the robot, such as a drivetrain, arm, or claw.
  * Subsystems are used to specify requirements for commands, ensuring that
  * multiple commands do not try to control the same subsystem at the same time.
+ *
+ * Note: The CommandScheduler now accepts any Object as a subsystem, provided it
+ * is registered. This interface is provided for convenience and type safety
+ * within this library, but foreign subsystems (from other libraries) can also be used.
  */
 public interface Subsystem {
     /**
