@@ -12,6 +12,7 @@ dependencyResolutionManagement {
         mavenCentral()
         maven { url = uri("https://mymaven.bylazar.com/releases") }
         maven { url = uri("https://repo.dairy.foundation/releases") }
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
