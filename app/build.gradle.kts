@@ -85,8 +85,6 @@ dependencies {
     compileOnly(libs.ftc.common)
 
     implementation(libs.pedro.pathing)
-    implementation(libs.solvers.core)
-    implementation(libs.solvers.pedro)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)

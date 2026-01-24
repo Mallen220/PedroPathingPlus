@@ -9,3 +9,7 @@ Action: Run unit tests manually using `javac` and `java` with the system-provide
 2024-05-23 - Foreign Command Compatibility
 Learning: Using `Object` keys for requirements and reflective adapters allows supporting commands from any library without hard dependencies.
 Action: Use this pattern when interoperability with unknown or multiple external libraries is required.
+
+2024-05-23 - Dependency Removal
+Learning: Removing a core dependency like `solvers-lib` requires careful search-and-replace of imports and verifying that local replacements (like `Command` and `InstantCommand`) are fully compatible with existing usage (like `NamedCommands`).
+Action: Always grep for the package name of the removed dependency to catch all usages before finalizing.

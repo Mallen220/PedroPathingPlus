@@ -1,14 +1,14 @@
 package com.pedropathingplus.pathing;
 
-import com.seattlesolvers.solverslib.command.Command;
-import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.pedropathingplus.command.Command;
+import com.pedropathingplus.command.InstantCommand;
 import java.util.HashMap;
 import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 /**
  * NamedCommands utility for registering and retrieving commands by name. Similar to WPILib's
- * NamedCommands, but adapted for solverslib.
+ * NamedCommands, but adapted for PedroPathingPlus.
  *
  * <p>Usage: 1. Register commands in RobotContainer: NamedCommands.registerCommand("IntakeOn", new
  * IntakeOnCommand()); NamedCommands.registerCommand("Shoot", new ShootCommand());
