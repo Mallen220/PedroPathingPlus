@@ -1,3 +1,7 @@
+## v1.1.0 - 2026-01-24
+
+Introduced command structure and more robust named commands logic. 
+
 ## v1.0.6 - 2026-01-11
 
 Added progress tracking for rotate events.
