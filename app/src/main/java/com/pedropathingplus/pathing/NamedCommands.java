@@ -2,6 +2,7 @@ package com.pedropathingplus.pathing;
 
 import com.pedropathingplus.command.Command;
 import com.pedropathingplus.command.InstantCommand;
+import com.pedropathingplus.command.ReflectiveCommandAdapter;
 import java.util.HashMap;
 import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -23,9 +24,9 @@ public class NamedCommands {
    * Register a command with a specific name.
    *
    * @param name The name to register the command under
-   * @param command The command to register
+   * @param command The command to register (can be a Command, Runnable, or generic object)
    */
-  public static void registerCommand(String name, Command command) {
+  public static void registerCommand(String name, Object command) {
     if (name == null || name.trim().isEmpty()) {
       throw new IllegalArgumentException("Command name cannot be null or empty");
     }
@@ -34,8 +35,17 @@ public class NamedCommands {
       throw new IllegalArgumentException("Command cannot be null");
     }
 
+    Command convertedCommand;
+    if (command instanceof Command) {
+      convertedCommand = (Command) command;
+    } else if (command instanceof Runnable) {
+      convertedCommand = new InstantCommand((Runnable) command);
+    } else {
+      convertedCommand = new ReflectiveCommandAdapter(command);
+    }
+
     String trimmedName = name.trim();
-    commands.put(trimmedName, command);
+    commands.put(trimmedName, convertedCommand);
     commandDescriptions.put(trimmedName, command.getClass().getSimpleName());
   }
 
@@ -46,7 +56,7 @@ public class NamedCommands {
    * @param command The command to register
    * @param description Description of what the command does
    */
-  public static void registerCommand(String name, Command command, String description) {
+  public static void registerCommand(String name, Object command, String description) {
     registerCommand(name, command);
     commandDescriptions.put(name.trim(), description);
   }

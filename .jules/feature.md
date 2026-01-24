@@ -21,3 +21,7 @@ Action: When a dependency fails to resolve, check alternative repositories (like
 2024-05-23 - API Compatibility
 Learning: When replacing an external library with a local implementation, ensure the local API (e.g., `Command.schedule()`) matches the methods expected by consuming classes (`ProgressTracker`) to avoid compilation errors.
 Action: Check call sites of replaced classes to ensure all used methods are implemented in the new version.
+
+2024-05-23 - NamedCommands Flexibility
+Learning: `NamedCommands` needs to serve as a bridge for user code that might bring its own command implementations. Accepting `Object` and adapting internally is more user-friendly than forcing everything to implement the local interface.
+Action: Use overload methods accepting `Object` in public APIs where external integration is expected.
