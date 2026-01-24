@@ -16,7 +16,7 @@ ftc-robotserver = { group = "org.firstinspires.ftc", name = "RobotServer", versi
 ftc-common = { group = "org.firstinspires.ftc", name = "FtcCommon", version.ref = "ftc-sdk" }
 ftc-onbotjava = { group = "org.firstinspires.ftc", name = "OnBotJava", version.ref = "ftc-sdk" }
 ftc-inspection = { group = "org.firstinspires.ftc", name = "Inspection", version.ref = "ftc-sdk" }
-pedro-pathing = { group = "com.pedropathing", name = "ftc", version.ref = "pedro-pathing" }
+pedro-pathing = { group = "com.github.Pedro-Pathing.PedroPathing", name = "ftc", version.ref = "pedro-pathing" }
 
 [plugins]
 androidLibrary = { id = "com.android.library", version.ref = "agp" }

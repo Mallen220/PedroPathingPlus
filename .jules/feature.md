@@ -13,3 +13,7 @@ Action: Use this pattern when interoperability with unknown or multiple external
 2024-05-23 - Dependency Removal
 Learning: Removing a core dependency like `solvers-lib` requires careful search-and-replace of imports and verifying that local replacements (like `Command` and `InstantCommand`) are fully compatible with existing usage (like `NamedCommands`).
 Action: Always grep for the package name of the removed dependency to catch all usages before finalizing.
+
+2024-05-23 - Build Configuration for External Deps
+Learning: Dependencies expected to be in custom repos might sometimes be missing or only available via JitPack with different coordinates.
+Action: When a dependency fails to resolve, check alternative repositories (like JitPack) and verify coordinates (GitHub group/repo vs maven group).
