@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,23 +23,26 @@ public final class PedroPathReader {
   private double lastDeg;
 
   public PedroPathReader(String filename, Context context) throws IOException {
-    InputStream stream = null;
-    try {
-      stream = context.getAssets().open("AutoPaths/" + filename);
-    } catch (IOException e) {
-      throw e;
-    }
+    this(getStream(filename, context));
+  }
 
-    if (stream == null) {
-      throw new FileNotFoundException("PP File not found: " + filename);
-    }
-
+  public PedroPathReader(InputStream stream) {
     Gson gson = new GsonBuilder().create();
     try (InputStreamReader reader = new InputStreamReader(stream)) {
       this.file = gson.fromJson(reader, PedroPP.class);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to read PedroPP file", e);
     }
 
     loadAllPoints();
+  }
+
+  private static InputStream getStream(String filename, Context context) throws IOException {
+    InputStream stream = context.getAssets().open("AutoPaths/" + filename);
+    if (stream == null) {
+      throw new FileNotFoundException("PP File not found: " + filename);
+    }
+    return stream;
   }
 
   private void loadAllPoints() {
@@ -72,8 +76,21 @@ public final class PedroPathReader {
     return poses.get(name);
   }
 
-  private static Pose toPose(double x, double y, double deg) {
+  public Pose getStartPose() {
+      return poses.get("startPoint");
+  }
+
+  public List<PedroPP.Line> getLines() {
+      return file.lines;
+  }
+
+  public static Pose toPose(double x, double y, double deg) {
     return new Pose(y, 144 - x, Math.toRadians(deg - 90));
+  }
+
+  public static Pose toPose(PedroPP.Point point) {
+      // Control points don't have heading, just X Y
+      return toPose(point.x, point.y, 0); // Heading irrelevant for control points usually
   }
 
   private static double extractHeading(
@@ -115,6 +132,14 @@ class PedroPP {
   public static class Line {
     public String name;
     public EndPoint endPoint;
+    public List<Point> controlPoints;
+    public String color;
+    public String id;
+    public List<EventMarker> eventMarkers;
+    public long waitBeforeMs;
+    public long waitAfterMs;
+    public String waitBeforeName;
+    public String waitAfterName;
   }
 
   public static class EndPoint {
@@ -122,5 +147,19 @@ class PedroPP {
     public double y;
     public String heading;
     public boolean reverse;
+    public double startDeg;
+    public double endDeg;
+  }
+
+  public static class Point {
+      public double x;
+      public double y;
+  }
+
+  public static class EventMarker {
+      public String id;
+      public String name;
+      public double position; // 0.0 to 1.0
+      public int lineIndex;
   }
 }

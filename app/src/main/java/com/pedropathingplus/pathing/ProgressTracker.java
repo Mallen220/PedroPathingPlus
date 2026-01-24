@@ -10,8 +10,23 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class ProgressTracker {
   private final Follower follower;
   private PathChain currentChain;
-  private final Map<String, Double> eventPositions = new HashMap<>();
-  private final Map<String, Boolean> eventTriggered = new HashMap<>();
+
+  private static class EventInfo {
+      String commandName;
+      double position;
+      int lineIndex;
+      boolean triggered;
+
+      EventInfo(String commandName, double position, int lineIndex) {
+          this.commandName = commandName;
+          this.position = position;
+          this.lineIndex = lineIndex;
+          this.triggered = false;
+      }
+  }
+
+  private final Map<String, EventInfo> events = new HashMap<>();
+
   private Telemetry telemetry;
   private String currentPathName = "";
   private double chainProgress = 0.0;
@@ -45,58 +60,81 @@ public class ProgressTracker {
     }
   }
 
-  public void registerEvent(String eventName, double position) {
-    eventPositions.put(eventName, position);
-    eventTriggered.put(eventName, false);
+  public void registerEvent(String id, String commandName, double position, int lineIndex) {
+    events.put(id, new EventInfo(commandName, position, lineIndex));
     if (telemetry != null) {
-      telemetry.addData("Event Registered", eventName + " @ " + position);
+      telemetry.addData("Event Registered", id + " -> " + commandName + " @ " + position + " (Line " + lineIndex + ")");
       telemetry.update();
     }
   }
 
+  public void registerEvent(String eventName, double position) {
+      registerEvent(eventName, eventName, position, -1);
+  }
+
   public void clearEvents() {
-    eventPositions.clear();
-    eventTriggered.clear();
+    events.clear();
     if (telemetry != null) {
       telemetry.addData("ProgressTracker", "Events cleared");
     }
   }
 
-  public void executeEvent(String eventName) {
-    if (!eventTriggered.getOrDefault(eventName, true)) {
-      eventTriggered.put(eventName, true);
+  public void executeEvent(String id) {
+    EventInfo info = events.get(id);
+    if (info != null && !info.triggered) {
+      info.triggered = true;
       if (telemetry != null) {
-        telemetry.addLine("EVENT TRIGGERED: " + eventName);
+        telemetry.addLine("EVENT TRIGGERED: " + info.commandName);
         telemetry.update();
       }
       // Execute the named command if it exists
-      if (NamedCommands.hasCommand(eventName)) {
-        NamedCommands.getCommand(eventName).schedule();
+      if (NamedCommands.hasCommand(info.commandName)) {
+        NamedCommands.getCommand(info.commandName).schedule();
       }
     }
   }
 
-  public boolean isEventTriggered(String eventName) {
-    return eventTriggered.getOrDefault(eventName, false);
+  public boolean isEventTriggered(String id) {
+    EventInfo info = events.get(id);
+    return info != null && info.triggered;
   }
 
-  public boolean shouldTriggerEvent(String eventName) {
-    if (!eventPositions.containsKey(eventName) || isEventTriggered(eventName)) {
+  public boolean shouldTriggerEvent(String id) {
+    EventInfo info = events.get(id);
+    if (info == null || info.triggered) {
       return false;
     }
 
     updateProgress();
-    double eventPosition = eventPositions.get(eventName);
+
+    boolean shouldTrigger = false;
+    if (isTrackingTurn) {
+        shouldTrigger = pathProgress >= info.position;
+    } else {
+        // Path/Chain following logic
+        if (info.lineIndex != -1) {
+             int currentIndex = follower.getChainIndex();
+             if (currentIndex > info.lineIndex) {
+                 shouldTrigger = true;
+             } else if (currentIndex == info.lineIndex) {
+                 shouldTrigger = pathProgress >= info.position;
+             }
+        } else {
+            // No line index specified, assume current path progress relative to whatever is running?
+            // Or maybe default to 0? Original logic just checked pathProgress.
+            shouldTrigger = pathProgress >= info.position;
+        }
+    }
 
     if (telemetry != null) {
-      telemetry.addData("Event Check", eventName);
-      telemetry.addData("Event Position", eventPosition);
+      telemetry.addData("Event Check", id);
+      telemetry.addData("Event Position", info.position);
       telemetry.addData("Current Progress", pathProgress);
-      telemetry.addData("Should Trigger", pathProgress >= eventPosition);
+      telemetry.addData("Should Trigger", shouldTrigger);
       telemetry.update();
     }
 
-    return pathProgress >= eventPosition;
+    return shouldTrigger;
   }
 
   /**
