@@ -5,17 +5,41 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * A command group that runs a set of commands in parallel.
- * The group ends when ANY command finishes.
+ * A command group that runs a set of commands in parallel until ONE of them finishes.
+ * <p>
+ * This is useful for "race" conditions, such as "drive forward until a sensor is triggered OR time runs out".
+ * When the first command finishes, all other running commands are interrupted.
+ * </p>
  */
 public class ParallelRaceGroup extends CommandGroupBase {
+
+    /**
+     * The list of commands to run in parallel race.
+     */
     private final List<Command> commands = new ArrayList<>();
+
+    /**
+     * A flag indicating if the race has finished (one command has finished).
+     */
     private boolean finished = false;
 
+    /**
+     * Creates a new ParallelRaceGroup with the given commands.
+     *
+     * @param commands The commands to race against each other.
+     */
     public ParallelRaceGroup(Command... commands) {
         addCommands(commands);
     }
 
+    /**
+     * Adds commands to the race group.
+     * <p>
+     * Also aggregates requirements from all added commands.
+     * </p>
+     *
+     * @param commands The commands to add.
+     */
     @Override
     public void addCommands(Command... commands) {
         this.commands.addAll(Arrays.asList(commands));
@@ -24,6 +48,12 @@ public class ParallelRaceGroup extends CommandGroupBase {
         }
     }
 
+    /**
+     * Initializes the race group.
+     * <p>
+     * Starts all commands in the group.
+     * </p>
+     */
     @Override
     public void initialize() {
         finished = false;
@@ -32,6 +62,12 @@ public class ParallelRaceGroup extends CommandGroupBase {
         }
     }
 
+    /**
+     * Executes all running commands.
+     * <p>
+     * Checks if any command has finished. If so, it ends that command and marks the race as finished.
+     * </p>
+     */
     @Override
     public void execute() {
         if (finished) return;
@@ -45,25 +81,29 @@ public class ParallelRaceGroup extends CommandGroupBase {
         }
     }
 
+    /**
+     * Ends the race group.
+     * <p>
+     * Interrupts all commands that are still running (didn't win the race).
+     * </p>
+     *
+     * @param interrupted whether the race group itself was interrupted.
+     */
     @Override
     public void end(boolean interrupted) {
         for (Command command : commands) {
-            // If the command is not finished (because another one won the race), interrupt it.
-            // Note: We don't have an easy way to check if a specific command finished in the loop above
-            // without storing state, but usually ending a finished command again is benign or handled by isFinished checks.
-            // However, strictly speaking, we should only end those that are still running.
-            // Since we can't easily query "isRunning" without tracking it, we rely on the fact that
-            // calling end() on a finished command is generally safe if implemented idempotently,
-            // OR we accept that we might call end(true) on commands that haven't finished.
-
-            // Better approach: Since we know the group ends immediately when one finishes,
-            // all others must be interrupted.
-             if (!command.isFinished()) { // Primitive check, assuming isFinished is stable
+            // interrupt all commands that haven't finished yet
+             if (!command.isFinished()) {
                  command.end(true);
              }
         }
     }
 
+    /**
+     * Checks if the race has finished.
+     *
+     * @return {@code true} if any command has finished, {@code false} otherwise.
+     */
     @Override
     public boolean isFinished() {
         return finished;

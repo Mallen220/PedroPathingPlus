@@ -12,15 +12,48 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A utility class for reading and parsing Pedro Pathing (.pp) files from the Android assets directory.
+ * <p>
+ * This class handles the deserialization of the JSON-based path files and converts the coordinate system
+ * used in the visualizer to the robot's coordinate system (Pose). It caches the parsed poses for quick retrieval
+ * by name.
+ * </p>
+ */
 public final class PedroPathReader {
 
+  /**
+   * The parsed structure of the Pedro Pathing file.
+   */
   private final PedroPP file;
+
+  /**
+   * A map storing the parsed poses, keyed by their name (with spaces removed).
+   */
   private final Map<String, Pose> poses = new HashMap<>();
 
+  /**
+   * The last recorded X coordinate during parsing, used for relative calculations or heading extraction.
+   */
   private double lastX;
+
+  /**
+   * The last recorded Y coordinate during parsing, used for relative calculations or heading extraction.
+   */
   private double lastY;
+
+  /**
+   * The last recorded heading (in degrees) during parsing, used when no new heading is specified.
+   */
   private double lastDeg;
 
+  /**
+   * Constructs a new {@code PedroPathReader} and loads the specified path file.
+   *
+   * @param filename The name of the .pp file to load (relative to the "AutoPaths" folder in assets).
+   * @param context  The Android context used to access the assets manager.
+   * @throws IOException If the file cannot be found or an error occurs during reading.
+   */
   public PedroPathReader(String filename, Context context) throws IOException {
     InputStream stream = null;
     try {
@@ -41,6 +74,13 @@ public final class PedroPathReader {
     loadAllPoints();
   }
 
+  /**
+   * Processes the raw data from the {@code PedroPP} object and populates the {@code poses} map.
+   * <p>
+   * This method iterates through the start point and all lines defined in the file, converting
+   * coordinates and calculating headings as necessary.
+   * </p>
+   */
   private void loadAllPoints() {
     double x = file.startPoint.x;
     double y = file.startPoint.y;
@@ -68,14 +108,48 @@ public final class PedroPathReader {
     }
   }
 
+  /**
+   * Retrieves a parsed {@link Pose} by its name.
+   *
+   * @param name The name of the point or line (e.g., "startPoint", "spikeMark").
+   * @return The corresponding {@link Pose}, or {@code null} if not found.
+   */
   public Pose get(String name) {
     return poses.get(name);
   }
 
+  /**
+   * Converts the visualizer's coordinate system to the robot's {@link Pose}.
+   * <p>
+   * The visualizer typically uses a different coordinate frame (e.g., origin top-left vs center).
+   * This method applies the necessary transformations:
+   * <ul>
+   *     <li>Swaps X and Y.</li>
+   *     <li>Inverts X (144 - x).</li>
+   *     <li>Adjusts heading by -90 degrees and converts to radians.</li>
+   * </ul>
+   * </p>
+   *
+   * @param x   The X coordinate from the visualizer.
+   * @param y   The Y coordinate from the visualizer.
+   * @param deg The heading in degrees from the visualizer.
+   * @return The converted {@link Pose}.
+   */
   private static Pose toPose(double x, double y, double deg) {
     return new Pose(y, 144 - x, Math.toRadians(deg - 90));
   }
 
+  /**
+   * Calculates the heading for a point based on the specified mode and previous coordinates.
+   *
+   * @param mode    The heading mode ("linear", "tangential", or others).
+   * @param lastX   The X coordinate of the previous point.
+   * @param lastY   The Y coordinate of the previous point.
+   * @param x       The X coordinate of the current point.
+   * @param y       The Y coordinate of the current point.
+   * @param lastDeg The heading of the previous point.
+   * @return The calculated heading in degrees.
+   */
   private static double extractHeading(
       String mode, double lastX, double lastY, double x, double y, double lastDeg) {
     double dx = x - lastX;
@@ -99,28 +173,62 @@ public final class PedroPathReader {
 ///  PEDRO PP FILE DEFINITIONS                                                                   ///
 ///                                                                                              ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Represents the root structure of a Pedro Pathing (.pp) JSON file.
+ * <p>
+ * This class matches the JSON schema expected by the parser.
+ * </p>
+ */
 class PedroPP {
 
+  /**
+   * The starting point of the path.
+   */
   public StartPoint startPoint;
+
+  /**
+   * A list of lines (path segments) following the start point.
+   */
   public List<Line> lines;
 
+  /**
+   * Represents the start point definition in the JSON file.
+   */
   public static class StartPoint {
+    /** The X coordinate of the start point. */
     public double x;
+    /** The Y coordinate of the start point. */
     public double y;
+    /** The heading string description (unused in logic but present in JSON). */
     public String heading;
+    /** The starting heading in degrees. */
     public double startDeg;
+    /** The ending heading in degrees (unused in start point logic typically). */
     public double endDeg;
   }
 
+  /**
+   * Represents a line segment definition in the JSON file.
+   */
   public static class Line {
+    /** The name of the line segment (e.g., "scorePreload"). */
     public String name;
+    /** The endpoint definition of this line segment. */
     public EndPoint endPoint;
   }
 
+  /**
+   * Represents the endpoint of a line segment in the JSON file.
+   */
   public static class EndPoint {
+    /** The X coordinate of the endpoint. */
     public double x;
+    /** The Y coordinate of the endpoint. */
     public double y;
+    /** The heading mode or value string (e.g., "tangential", "linear"). */
     public String heading;
+    /** Whether the segment is traversed in reverse. */
     public boolean reverse;
   }
 }

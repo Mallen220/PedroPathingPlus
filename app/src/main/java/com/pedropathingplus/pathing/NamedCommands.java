@@ -8,23 +8,48 @@ import java.util.Map;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 /**
- * NamedCommands utility for registering and retrieving commands by name. Similar to WPILib's
- * NamedCommands, but adapted for PedroPathingPlus.
+ * A utility class for globally registering and retrieving commands by name.
+ * <p>
+ * This class facilitates the integration of text-based command scheduling (e.g., from path files or dashboards)
+ * with the robot's command framework. It acts as a central registry where commands can be stored and later
+ * looked up to be executed dynamically.
+ * </p>
+ * <p>
+ * This is particularly useful for autonomous routines where events are triggered by string keys in a data file.
+ * </p>
  *
- * <p>Usage: 1. Register commands in RobotContainer: NamedCommands.registerCommand("IntakeOn", new
- * IntakeOnCommand()); NamedCommands.registerCommand("Shoot", new ShootCommand());
+ * <h2>Usage Example:</h2>
+ * <pre>{@code
+ * // In RobotContainer or Init:
+ * NamedCommands.registerCommand("IntakeOn", new IntakeOnCommand());
+ * NamedCommands.registerCommand("Shoot", new ShootCommand());
  *
- * <p>2. Use in autonomous paths: NamedCommands.getCommand("IntakeOn").schedule();
+ * // In Autonomous execution:
+ * NamedCommands.getCommand("IntakeOn").schedule();
+ * }</pre>
  */
 public class NamedCommands {
+
+  /**
+   * The map storing registered commands, keyed by their unique name.
+   */
   private static final Map<String, Command> commands = new HashMap<>();
+
+  /**
+   * The map storing descriptions for registered commands, keyed by the command name.
+   */
   private static final Map<String, String> commandDescriptions = new HashMap<>();
 
   /**
-   * Register a command with a specific name.
+   * Registers a command with a specific name.
+   * <p>
+   * The command object can be a {@link Command}, a {@link Runnable} (which is wrapped in an {@link InstantCommand}),
+   * or any other object (which is wrapped in a {@link ReflectiveCommandAdapter}).
+   * </p>
    *
-   * @param name The name to register the command under
-   * @param command The command to register (can be a Command, Runnable, or generic object)
+   * @param name    The unique name to register the command under (case-sensitive, trimmed).
+   * @param command The command object to register. Must not be null.
+   * @throws IllegalArgumentException If the name is null/empty or the command is null.
    */
   public static void registerCommand(String name, Object command) {
     if (name == null || name.trim().isEmpty()) {
@@ -50,11 +75,11 @@ public class NamedCommands {
   }
 
   /**
-   * Register a command with a specific name and description.
+   * Registers a command with a specific name and a custom description.
    *
-   * @param name The name to register the command under
-   * @param command The command to register
-   * @param description Description of what the command does
+   * @param name        The unique name to register the command under.
+   * @param command     The command object to register.
+   * @param description A human-readable description of what the command does.
    */
   public static void registerCommand(String name, Object command, String description) {
     registerCommand(name, command);
@@ -62,10 +87,15 @@ public class NamedCommands {
   }
 
   /**
-   * Get a registered command by name.
+   * Retrieves a registered command by its name.
+   * <p>
+   * If the command is not found, a warning is printed to the standard error output, and a safe,
+   * no-op {@link InstantCommand} is returned to prevent crashes during execution.
+   * </p>
    *
-   * @param name The name of the command to retrieve
-   * @return The registered command, or a no-op InstantCommand if not found
+   * @param name The name of the command to retrieve.
+   * @return The registered {@link Command}, or a no-op command if not found.
+   * @throws IllegalArgumentException If the provided name is null or empty.
    */
   public static Command getCommand(String name) {
     if (name == null || name.trim().isEmpty()) {
@@ -88,10 +118,10 @@ public class NamedCommands {
   }
 
   /**
-   * Check if a command is registered with the given name.
+   * Checks if a command is currently registered with the given name.
    *
-   * @param name The name to check
-   * @return true if a command is registered with that name
+   * @param name The name to check.
+   * @return {@code true} if a command is registered with that name, {@code false} otherwise.
    */
   public static boolean hasCommand(String name) {
     if (name == null) return false;
@@ -99,10 +129,10 @@ public class NamedCommands {
   }
 
   /**
-   * Get the description of a registered command.
+   * Retrieves the description of a registered command.
    *
-   * @param name The name of the command
-   * @return The command description, or empty string if not found
+   * @param name The name of the command.
+   * @return The description of the command, or an empty string if the command is not found.
    */
   public static String getCommandDescription(String name) {
     if (name == null) return "";
@@ -110,25 +140,30 @@ public class NamedCommands {
   }
 
   /**
-   * Get all registered command names.
+   * Retrieves an array of all currently registered command names.
    *
-   * @return Array of all registered command names
+   * @return An array of strings containing the names of all registered commands.
    */
   public static String[] getAllCommandNames() {
     return commands.keySet().toArray(new String[0]);
   }
 
-  /** Clear all registered commands. Useful for testing or resetting state. */
+  /**
+   * Clears all registered commands and their descriptions.
+   * <p>
+   * This is useful for resetting the state between tests or OpModes to ensure a clean environment.
+   * </p>
+   */
   public static void clearAllCommands() {
     commands.clear();
     commandDescriptions.clear();
   }
 
   /**
-   * Remove a specific command by name.
+   * Removes a specific command from the registry.
    *
-   * @param name The name of the command to remove
-   * @return true if the command was removed, false if it didn't exist
+   * @param name The name of the command to remove.
+   * @return {@code true} if the command was successfully found and removed, {@code false} otherwise.
    */
   public static boolean removeCommand(String name) {
     if (name == null) return false;
@@ -141,15 +176,22 @@ public class NamedCommands {
   }
 
   /**
-   * Get the number of registered commands.
+   * Returns the total number of registered commands.
    *
-   * @return Count of registered commands
+   * @return The count of registered commands.
    */
   public static int getCommandCount() {
     return commands.size();
   }
 
-  /** Print all registered commands to console. Useful for debugging. */
+  /**
+   * Prints a list of all registered commands and their descriptions to the provided telemetry.
+   * <p>
+   * This is intended for debugging purposes to verify which commands are available.
+   * </p>
+   *
+   * @param tell The {@link Telemetry} object to print the list to.
+   */
   public static void listAllCommands(Telemetry tell) {
     tell.addLine("=== Registered NamedCommands ===");
     for (String name : commands.keySet()) {
