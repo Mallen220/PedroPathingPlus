@@ -67,4 +67,29 @@ We are working hard to bring you:
 
 ---
 
+## 📚 Generating Javadoc
+
+This project provides a Gradle task to generate HTML Javadoc for the `app` Android library module.
+
+To generate the Javadoc run from the repository root:
+
+```bash
+# Generate Javadoc for the app module
+./gradlew :app:generateJavadoc
+```
+
+When the task completes successfully the HTML files will be written to:
+
+```
+app/build/docs/javadoc/index.html
+```
+
+Open that file in your browser to view the generated API documentation.
+
+Notes:
+- The task collects Java sources from the `main` source set. If you add Java files in other source sets update the `generateJavadoc` task in `app/build.gradle.kts`.
+- The task uses a relaxed doclint config to avoid failures on older code. If you have doclint issues, consider cleaning up Javadoc comments or enabling stricter linting.
+
+---
+
 **Built by [Mallen220](https://github.com/Mallen220) & Contributors**

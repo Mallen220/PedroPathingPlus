@@ -76,6 +76,70 @@ afterEvaluate {
             mavenLocal()
         }
     }
+
+    // Provide a resolvable configuration specifically for Javadoc generation dependencies.
+    // This keeps Javadoc dependency resolution separate from the module's compile/runtime configs.
+    configurations.register("javadocDeps") {
+        isCanBeResolved = true
+        isCanBeConsumed = false
+    }
+
+    dependencies {
+        compileOnly(libs.ftc.robotcore)
+        compileOnly(libs.ftc.hardware)
+        compileOnly(libs.ftc.robotserver)
+        compileOnly(libs.ftc.common)
+
+        implementation(libs.pedro.pathing)
+
+        testImplementation(libs.junit)
+        androidTestImplementation(libs.androidx.test.ext.junit)
+        androidTestImplementation(libs.espresso.core)
+
+        // Javadoc resolver-only dependencies (do not affect the published artifact)
+        add("javadocDeps", libs.ftc.robotcore)
+        add("javadocDeps", libs.ftc.hardware)
+        add("javadocDeps", libs.ftc.robotserver)
+        add("javadocDeps", libs.ftc.common)
+        add("javadocDeps", libs.pedro.pathing)
+        // Gson is used in source; include a stable gson for Javadoc generation
+        add("javadocDeps", "com.google.code.gson:gson:2.10.1")
+    }
+
+    // Javadoc generation for this Android library module.
+    // Run with: ./gradlew :app:generateJavadoc
+    // Output is written to app/build/docs/javadoc/index.html
+
+    tasks.register("generateJavadoc", Javadoc::class) {
+        description = "Generates Javadoc API documentation for the main Java sources."
+        group = "documentation"
+
+        // Collect source dirs from the Android main source set
+        val sourceDirs = android.sourceSets.getByName("main").java.srcDirs
+        // Also include javadoc-only stubs so Javadoc can resolve external types without resolving full SDKs
+        val javadocStubDir = file("src/javadoc-stubs/java")
+        val allSource = files(sourceDirs).asFileTree.plus(files(javadocStubDir).asFileTree)
+        // Convert to a FileTree to satisfy the Javadoc task's expected type
+        source = allSource
+
+        // Build a classpath with the Android boot classpath and the resolvable javadocDeps
+        val androidBootClasspath = files(android.bootClasspath)
+        val javadocDepsConfig = configurations.getByName("javadocDeps")
+        val javadocDepsFiles = try { files(javadocDepsConfig.resolve()) } catch (e: Exception) { files() }
+        classpath = files(androidBootClasspath, javadocDepsFiles)
+
+        // Put generated documentation in a predictable location
+        destinationDir = file("$buildDir/docs/javadoc")
+
+        // Encoding and options to avoid doclint failures on older codebases
+        options.encoding = "UTF-8"
+        (options as org.gradle.external.javadoc.StandardJavadocDocletOptions).apply {
+            addStringOption("Xdoclint:none", "-quiet")
+            // Link to Android and Java SE API docs to get external references resolved
+            links("https://developer.android.com/reference/")
+            links("https://docs.oracle.com/en/java/javase/11/docs/api/")
+        }
+    }
 }
 
 dependencies {
