@@ -1,29 +1,46 @@
 package com.pedropathingplus.command;
 
 /**
- * A command that waits for a specified number of milliseconds before finishing.
+ * A command that waits for a specified duration before finishing.
+ * <p>
+ * This is useful in command sequences where a delay is needed (e.g., waiting for a mechanism to settle).
+ * </p>
  */
 public class WaitCommand implements Command {
+
+    /**
+     * The duration to wait in milliseconds.
+     */
     private final long durationMs;
+
+    /**
+     * The system time (in milliseconds) when the command started.
+     */
     private long startTimeMs;
 
     /**
-     * Create a WaitCommand that waits for the given number of milliseconds.
-     * If durationMs <= 0 the command finishes immediately.
+     * Creates a new WaitCommand that waits for the specified duration.
      *
-     * @param durationMs milliseconds to wait
+     * @param durationMs The duration to wait in milliseconds.
      */
     public WaitCommand(long durationMs) {
         this.durationMs = durationMs;
         this.startTimeMs = Long.MIN_VALUE;
     }
 
+    /**
+     * Records the start time when the command is scheduled.
+     */
     @Override
     public void initialize() {
-        // record start time when scheduled
         this.startTimeMs = System.currentTimeMillis();
     }
 
+    /**
+     * Checks if the wait duration has elapsed.
+     *
+     * @return {@code true} if the elapsed time since initialization is greater than or equal to the duration.
+     */
     @Override
     public boolean isFinished() {
         if (durationMs <= 0) {
@@ -36,4 +53,3 @@ public class WaitCommand implements Command {
         return System.currentTimeMillis() - startTimeMs >= durationMs;
     }
 }
-
