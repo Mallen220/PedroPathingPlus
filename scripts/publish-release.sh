@@ -171,39 +171,41 @@ else
   echo "Detected GitHub repo: ${OWNER}/${REPO} (from ${ORIGIN_URL})"
 fi
 
+# Extract the top section for this version (until next "## " header) to include as body
+TMP_NOTES="$(mktemp)"
+if [[ -f "${CHANGELOG}" ]]; then
+  awk '/^## / { c++; if (c > 1) exit; next } c == 1 { print }' "${CHANGELOG}" > "${TMP_NOTES}"
+else
+  echo "Release ${VERSION}" > "${TMP_NOTES}"
+fi
+
 # Try gh CLI first
 if command -v gh >/dev/null 2>&1; then
   echo "Using gh CLI to create release..."
-  gh release create "${TAG}" --title "v${VERSION}" --notes-file "${CHANGELOG}" --notes "Release ${VERSION}"
+  gh release create "${TAG}" --title "v${VERSION}" --notes-file "${TMP_NOTES}"
   echo "Release v${VERSION} created via gh."
 else
   # Fallback to GitHub API using GITHUB_TOKEN
   if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     echo "gh CLI not found and GITHUB_TOKEN is not set. Install gh or set GITHUB_TOKEN."
+    rm -f "${TMP_NOTES}"
     exit 1
   fi
 
   if [[ -z "${OWNER}" || -z "${REPO}" ]]; then
     echo "Unable to parse GitHub repo from origin URL: ${ORIGIN_URL}"
+    rm -f "${TMP_NOTES}"
     exit 1
   fi
 
   API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases"
-
-  # Use changelog content if available for body
-  if [[ -f "${CHANGELOG}" ]]; then
-    # Extract the top section for this version (until next "## " header) to include as body
-    RELEASE_BODY="$(awk '/^## /{if (c++==0) {print; next} else exit} {if (c==0) print}' "${CHANGELOG}" | sed '1d' || true)"
-  else
-    RELEASE_BODY="Release ${VERSION}"
-  fi
 
   # JSON encode simple body (safe for most contents)
   POST_DATA=$(cat <<EOF
 {
   "tag_name": "${TAG}",
   "name": "v${VERSION}",
-  "body": $(printf '%s' "${RELEASE_BODY}" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),
+  "body": $(python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))' < "${TMP_NOTES}"),
   "draft": false,
   "prerelease": false
 }
@@ -221,9 +223,12 @@ EOF
     echo "Release v${VERSION} created successfully."
   else
     echo "Failed to create release (HTTP ${HTTP_RESPONSE})."
+    rm -f "${TMP_NOTES}"
     exit 1
   fi
 fi
+
+rm -f "${TMP_NOTES}"
 
 # At this point the GitHub release/tag exists. Publish to JitPack by triggering a build and show coordinates.
 if [[ -n "${OWNER}" && -n "${REPO}" ]]; then
