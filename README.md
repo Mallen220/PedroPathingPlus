@@ -10,7 +10,7 @@
 
 ---
 
-## 🎨 Turtle Tracer
+## Turtle Tracer
 
 This library is designed to work hand-in-hand with the **Turtle Tracer**, a powerful desktop application for planning, simulating, and exporting your autonomous routines.
 
@@ -25,7 +25,7 @@ The Visualizer powers TurtleTracerLib by providing:
 
 ---
 
-## 📥 Installation
+## Installation
 
 To use TurtleTracerLib in your FTC project, follow these steps:
 
@@ -59,7 +59,7 @@ dependencies {
 
 ---
 
-## 🚀 Upcoming Features
+## Upcoming Features
 
 We are working hard to bring you:
 
@@ -69,7 +69,7 @@ We are working hard to bring you:
 
 ---
 
-## 📚 Generating Javadoc
+## Generating Javadoc
 
 This project provides a Gradle task to generate HTML Javadoc for the `app` Android library module.
 
