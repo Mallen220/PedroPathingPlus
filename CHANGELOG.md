@@ -1,3 +1,9 @@
+## v2.1.0 - 2026-05-24
+
+- Removed Command-Based Support
+- Refactor NamedCommands to exclusively use Runnable
+- Added support for NextFTC, SolversLib, and Basic java to use NamedCommands
+
 ## v2.0.0 - 2026-03-21
 
 - **PROJECT RENAME**: Renamed project from `PedroPathingPlus` to `TurtleTracerLib`.
